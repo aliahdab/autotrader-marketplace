@@ -46,11 +46,11 @@ jobs:
       - name: Build and run tests
         run: ./gradlew apiTest
 
-      - name: Upload test reports
-        uses: actions/upload-artifact@v2
+      - name: Upload test reports as artifact
+        uses: actions/upload-artifact@v2.3.0
         if: always()
         with:
           name: test-reports
           path: |
             build/reports/tests
-            build/test
+            build/test-reports
