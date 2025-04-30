@@ -1,4 +1,4 @@
-name: Auth API Tests
+name: Backend Unit Tests
 
 on:
   push:
@@ -37,9 +37,6 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-
-      - name: Install Newman
-        run: npm install -g newman newman-reporter-html
 
       - name: Grant execute permission for scripts
         run: |
