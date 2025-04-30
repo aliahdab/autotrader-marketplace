@@ -38,3 +38,102 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+apply plugin: 'java'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+// Add the following block to integrate Postman tests
+task installNewman(type: Exec) {
+    description = 'Install Newman CLI and HTML reporter for running Postman tests'
+    commandLine 'npm', 'install', '-g', 'newman', 'newman-reporter-html'
+    ignoreExitValue true
+    doFirst {
+        println "Checking and installing Newman with HTML reporter..."
+    }
+}
+
+task startApp(type: Exec) {
+    description = 'Start the Spring Boot application for testing'
+    // Use the bootRun task directly for development
+    commandLine './gradlew', 'bootRun', '--args=--spring.profiles.active=test'
+    // Run in background
+    standardOutput = new ByteArrayOutputStream()
+    errorOutput = new ByteArrayOutputStream()
+    
+    // Don't block the build
+    ignoreExitValue true
+    
+    doFirst {
+        println "Starting Spring Boot application for testing..."
+    }
+    
+    // We'll use a fixed delay instead of trying to detect PID
+    doLast {
+        println "Application started, waiting for initialization..."
+        sleep(15000)  // Wait 15 seconds for app to fully initialize
+    }
+}
+
+task runPostmanTests(type: Exec) {
+    description = 'Run Postman tests using Newman'
+    dependsOn installNewman, startApp
+    
+    // Create directories for reports
+    doFirst {
+        mkdir 'build/test-reports/postman'
+        println "Running Postman tests using Newman..."
+        
+        // Verify newman is installed correctly
+        def checkNewman = "newman --version".execute()
+        checkNewman.waitFor()
+        println "Newman version: ${checkNewman.text.trim()}"
+        
+        // Check for reporters
+        def installedReporters = "npm list -g newman-reporter-html".execute()
+        installedReporters.waitFor()
+        println "Installed reporters: ${installedReporters.text.trim()}"
+        
+        // Install reporters if needed
+        if (!installedReporters.text.contains("newman-reporter-html")) {
+            println "Installing missing reporter..."
+            "npm install -g newman-reporter-html".execute().waitFor()
+        }
+    }
+    
+    commandLine 'newman', 'run', 
+        'src/test/resources/postman/autotrader-api-tests.json',
+        '-e', 'src/test/resources/postman/environment.json',
+        '--reporters', 'cli,html',
+        '--reporter-html-export', 'build/test-reports/postman/report.html'
+}
+
+task stopApp(type: Exec) {
+    description = 'Stop the Spring Boot application after testing'
+    dependsOn runPostmanTests
+    
+    // Gracefully stop all Spring Boot instances
+    commandLine 'sh', '-c', "pkill -f 'org.springframework.boot.loader.JarLauncher' || true"
+    
+    // Don't fail if no processes found
+    ignoreExitValue true
+    
+    doFirst {
+        println "Stopping Spring Boot application..."
+    }
+}
+
+// Integrate with the test task
+test {
+    finalizedBy stopApp  // Ensure app is stopped even if tests fail
+}
+
+task apiTest(dependsOn: [test, runPostmanTests, stopApp]) {
+    description = 'Run all tests including API tests using Postman'
+    
+    doLast {
+        println "All tests completed, including Postman API tests."
+        println "Check HTML report at: build/test-reports/postman/report.html"
+        println "You can also run standalone tests with: ./src/test/scripts/run_postman_tests.sh"
+    }
+}

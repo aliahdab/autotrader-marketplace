@@ -72,30 +72,38 @@ Configure the database connection in `application.properties` for production or 
 
 ## Testing
 
-### Running Tests
+### Unit and Integration Tests
 
+Run all standard tests with:
 ```bash
 ./gradlew test
 ```
 
-### Manual Testing Scripts
+### API Tests with Postman
 
-Two scripts are provided to test functionality:
-
-1. `test_endpoints.sh` - Test basic HTTP endpoints
-2. `test_auth.sh` - Test authentication endpoints
-
-Make them executable before running:
+We have automated API tests using Postman collections and Newman:
 
 ```bash
-chmod +x test_endpoints.sh test_auth.sh
+# Run all tests including Postman API tests
+./gradlew apiTest
+
+# Run just the API tests directly with the script
+./src/test/scripts/run_postman_tests.sh
 ```
 
-Example authentication test:
+The API tests verify:
+- User registration
+- User authentication with JWT
+- Role-based permissions
+- CRUD operations for car listings
 
-```bash
-./test_auth.sh
-```
+Test reports are generated in HTML and JUnit XML formats:
+- HTML: `build/test-reports/postman/report.html`
+- JUnit XML: `build/test-reports/postman/junit-report.xml`
+
+### CI/CD Integration
+
+The Postman tests are integrated into our CI/CD pipeline using GitHub Actions. Every push to main or develop branches triggers the test suite.
 
 ## Security
 
