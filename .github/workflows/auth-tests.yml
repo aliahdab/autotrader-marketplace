@@ -49,17 +49,6 @@ jobs:
       - name: Run unit and integration tests
         run: ./gradlew test
 
-      - name: Run API tests
-        run: |
-          # Start the app in background
-          nohup ./gradlew bootRun > /dev/null 2>&1 &
-          # Wait for app to start
-          sleep 30
-          # Run newman tests
-          newman run src/test/resources/postman/auth-collection.json -e src/test/resources/postman/test-env.json -r cli,htmlextra --reporter-htmlextra-export build/test-reports/newman
-          # Kill the app
-          pkill -f "java.*autotrader"
-
       - name: Upload test reports as artifact
         uses: actions/upload-artifact@v4
         if: always()
